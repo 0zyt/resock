@@ -6,12 +6,12 @@ import (
 )
 
 func RunClient() error {
-	return Run(getConfig().localAddr)
+	return Run(getConfig().localAddr, net.Listen)
 }
 
 func socks5Clientworker(accpetChan <-chan net.Conn) {
 	for local := range accpetChan {
-		remote, err := net.Dial("tcp", getConfig().remoteAddr)
+		remote, err := DialTLS(getConfig().remoteAddr)
 		if err != nil {
 			log.Println(err)
 			local.Close()

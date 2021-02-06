@@ -6,7 +6,7 @@ import (
 	"net"
 )
 
-var buf []byte = make([]byte, 256)
+var buf []byte = make([]byte, 4096)
 
 func Socks5Connect(conn net.Conn) (net.Conn, error) {
 	if err := socks5Auth(conn); err == nil {
@@ -26,7 +26,7 @@ func Socks5Connect(conn net.Conn) (net.Conn, error) {
 func socks5Auth(conn net.Conn) error {
 	n, err := conn.Read(buf[:2])
 	if err != nil || n != 2 {
-		return errors.New("reading header:" + err.Error())
+		return err
 	}
 	ver, nmethods := buf[0], buf[1]
 	if ver != 5 {

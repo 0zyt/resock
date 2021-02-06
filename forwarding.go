@@ -8,15 +8,15 @@ import (
 	"time"
 )
 
-func Run(lsIP string) error {
-	listen, err := net.Listen("tcp", lsIP)
-	defer listen.Close()
+func Run(lsIP string, listen func(network, address string) (net.Listener, error)) error {
+	listener, err := listen("tcp", lsIP)
+	defer listener.Close()
 	if err != nil {
 		log.Println("listen failed:", err)
 		return err
 	}
 	log.Println("listening on " + lsIP)
-	acceptor(listen, socks5ServerWorker)
+	acceptor(listener, socks5ServerWorker)
 	return nil
 }
 
@@ -36,16 +36,19 @@ func acceptor(listen net.Listener, worker func(accpetChan <-chan net.Conn)) {
 }
 
 func relay(src, dst net.Conn) {
-	defer dst.Close()
 	defer src.Close()
+	defer dst.Close()
 	wg := sync.WaitGroup{}
-	wg.Add(2)
-	forward := func(src, dst net.Conn, wg sync.WaitGroup) {
+
+	forward := func(src, dst net.Conn) {
+		defer wg.Done()
+		src.SetDeadline(time.Now().Add(10 * time.Second))
 		io.Copy(src, dst)
-		src.SetReadDeadline(time.Now().Add(5 * time.Second))
-		wg.Done()
 	}
-	go forward(src, dst, wg)
-	go forward(dst, src, wg)
+
+	wg.Add(2)
+	go forward(src, dst)
+	go forward(dst, src)
 	wg.Wait()
+
 }

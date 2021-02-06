@@ -6,7 +6,7 @@ import (
 )
 
 func RunServer() error {
-	return Run(getConfig().remoteAddr)
+	return Run(getConfig().remoteAddr, ListenTLS)
 }
 
 func socks5ServerWorker(accpetChan <-chan net.Conn) {
