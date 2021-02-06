@@ -18,8 +18,9 @@ func Socks5Connect(conn net.Conn) (net.Conn, error) {
 			return nil, err
 		}
 		return dstConn, nil
+	} else {
+		return nil, err
 	}
-	return nil, err
 }
 
 func socks5Auth(conn net.Conn) error {
