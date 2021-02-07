@@ -1,12 +1,30 @@
-package main
+package resock
 
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"net"
+	"sync"
 )
 
-var buf []byte = make([]byte, 4096)
+const (
+	bufSize = 1024
+)
+
+var bpool sync.Pool
+
+func init() {
+	bpool.New = func() interface{} {
+		return make([]byte, bufSize)
+	}
+}
+func bufferPoolGet() []byte {
+	return bpool.Get().([]byte)
+}
+func bufferPoolPut(b []byte) {
+	bpool.Put(b)
+}
 
 func Socks5Connect(conn net.Conn) (net.Conn, error) {
 	if err := socks5Auth(conn); err == nil {
@@ -24,6 +42,8 @@ func Socks5Connect(conn net.Conn) (net.Conn, error) {
 }
 
 func socks5Auth(conn net.Conn) error {
+	buf := bufferPoolGet()
+	defer bufferPoolPut(buf)
 	n, err := conn.Read(buf[:2])
 	if err != nil || n != 2 {
 		return err
@@ -38,8 +58,11 @@ func socks5Auth(conn net.Conn) error {
 }
 
 func socks5Requests(conn net.Conn) (net.Conn, error) {
+	buf := bufferPoolGet()
+	defer bufferPoolPut(buf)
 	n, err := conn.Read(buf)
 	if err != nil {
+		fmt.Println(111)
 		return nil, err
 	}
 	atpy := buf[3]

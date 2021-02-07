@@ -1,6 +1,7 @@
-package main
+package resock
 
 import (
+	"errors"
 	"io"
 	"log"
 	"net"
@@ -8,15 +9,20 @@ import (
 	"time"
 )
 
-func Run(lsIP string, listen func(network, address string) (net.Listener, error)) error {
-	listener, err := listen("tcp", lsIP)
-	defer listener.Close()
-	if err != nil {
-		log.Println("listen failed:", err)
-		return err
+func SelectProtocol(network, address string) (net.Listener, error) {
+	switch network {
+	case "tcp":
+		return net.Listen(network, address)
+	case "tls":
+		return ListenTLS(address)
+	default:
+		return nil, errors.New("unsupported protocol")
 	}
-	log.Println("listening on " + lsIP)
-	acceptor(listener, socks5ServerWorker)
+}
+
+func Run(listener net.Listener, worker func(accpetChan <-chan net.Conn)) error {
+
+	acceptor(listener, worker)
 	return nil
 }
 
@@ -41,9 +47,12 @@ func relay(src, dst net.Conn) {
 	wg := sync.WaitGroup{}
 
 	forward := func(src, dst net.Conn) {
+		buf := bufferPoolGet()
 		defer wg.Done()
+		defer bufferPoolPut(buf)
 		src.SetDeadline(time.Now().Add(10 * time.Second))
 		io.Copy(src, dst)
+
 	}
 
 	wg.Add(2)

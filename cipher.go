@@ -1,4 +1,4 @@
-package main
+package resock
 
 import (
 	"crypto/tls"
@@ -32,7 +32,7 @@ func DialTLS(address string) (net.Conn, error) {
 	return tls.Dial("tcp", address, conf)
 }
 
-func ListenTLS(network, address string) (net.Listener, error) {
+func ListenTLS(address string) (net.Listener, error) {
 	cert, err := tls.LoadX509KeyPair("certs/server.pem", "certs/server.key")
 	if err != nil {
 		log.Println(err)
@@ -53,5 +53,5 @@ func ListenTLS(network, address string) (net.Listener, error) {
 		ClientCAs:                clientCertPool,
 		PreferServerCipherSuites: true,
 	}
-	return tls.Listen(network, address, config)
+	return tls.Listen("tcp", address, config)
 }

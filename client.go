@@ -1,4 +1,4 @@
-package main
+package resock
 
 import (
 	"log"
@@ -6,14 +6,22 @@ import (
 )
 
 func RunClient() error {
-	return Run(getConfig().localAddr, net.Listen)
+	listener, err := SelectProtocol("tcp", getConfig().localAddr)
+	defer listener.Close()
+	if err != nil {
+		log.Println("listen failed:", err)
+		return err
+	}
+	log.Println("listening on " + getConfig().localAddr)
+	return Run(listener, socks5Clientworker)
 }
 
 func socks5Clientworker(accpetChan <-chan net.Conn) {
 	for local := range accpetChan {
-		remote, err := DialTLS(getConfig().remoteAddr)
+		remote, err := net.Dial("tcp", getConfig().remoteAddr)
+		//remote, err := DialTLS(getConfig().remoteAddr)
 		if err != nil {
-			log.Println(err)
+			log.Println("Client:" + err.Error())
 			local.Close()
 			continue
 		}
