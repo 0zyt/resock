@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"runtime"
 	"sync"
 	"time"
 )
@@ -21,14 +22,12 @@ func SelectProtocol(network, address string) (net.Listener, error) {
 }
 
 func Run(listener net.Listener, worker func(accpetChan <-chan net.Conn)) error {
-
 	acceptor(listener, worker)
 	return nil
 }
 
 func acceptor(listen net.Listener, worker func(accpetChan <-chan net.Conn)) {
-	acceptChan := make(chan net.Conn)
-	go worker(acceptChan)
+	acceptChan := make(chan net.Conn, runtime.NumCPU())
 	for {
 		accept, err := listen.Accept()
 		if err != nil {
@@ -37,6 +36,7 @@ func acceptor(listen net.Listener, worker func(accpetChan <-chan net.Conn)) {
 			continue
 		} else {
 			acceptChan <- accept
+			go worker(acceptChan)
 		}
 	}
 }
@@ -50,7 +50,7 @@ func relay(src, dst net.Conn) {
 		buf := bufferPoolGet()
 		defer wg.Done()
 		defer bufferPoolPut(buf)
-		src.SetDeadline(time.Now().Add(10 * time.Second))
+		src.SetDeadline(time.Now().Add(5 * time.Second))
 		io.Copy(src, dst)
 
 	}

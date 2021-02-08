@@ -3,7 +3,6 @@ package resock
 import (
 	"encoding/binary"
 	"errors"
-	"fmt"
 	"net"
 	"sync"
 )
@@ -62,8 +61,7 @@ func socks5Requests(conn net.Conn) (net.Conn, error) {
 	defer bufferPoolPut(buf)
 	n, err := conn.Read(buf)
 	if err != nil {
-		fmt.Println(111)
-		return nil, err
+		return nil, errors.New("socks5 read:" + err.Error())
 	}
 	atpy := buf[3]
 	dstAddr := &net.TCPAddr{}

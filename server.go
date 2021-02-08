@@ -6,7 +6,7 @@ import (
 )
 
 func RunServer() error {
-	listener, err := SelectProtocol("kcp", getConfig().remoteAddr)
+	listener, err := SelectProtocol(getConfig().protocol, getConfig().remoteAddr)
 	defer listener.Close()
 	if err != nil {
 		log.Println("listen failed:", err)

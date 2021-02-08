@@ -6,7 +6,7 @@ import (
 )
 
 func RunClient() error {
-	listener, err := SelectProtocol("tcp", getConfig().localAddr)
+	listener, err := SelectProtocol(getConfig().protocol, getConfig().localAddr)
 	defer listener.Close()
 	if err != nil {
 		log.Println("listen failed:", err)
