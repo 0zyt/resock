@@ -3,10 +3,11 @@ package resock
 import (
 	"errors"
 	"log"
+	"net"
 )
 
 func RunClient() error {
-	listener, err := SelectProtocol("tcp", GetCfg().Client)
+	listener, err := net.Listen("tcp", GetCfg().Client)
 	defer listener.Close()
 	if err != nil {
 		return errors.New("listen failed:" + err.Error())

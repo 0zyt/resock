@@ -2,10 +2,8 @@ package resock
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/fs"
-	"net"
 	"os"
 	"sync"
 )
@@ -36,17 +34,4 @@ func GetCfg() *config {
 func GenCfg() {
 	b, _ := json.MarshalIndent(&config{Server: "", Client: "2", Protocol: "3", Username: "4", Password: "5"}, " ", " ")
 	os.WriteFile("cfg.json", b, fs.ModePerm)
-}
-
-func SelectProtocol(network, address string) (net.Listener, error) {
-	switch network {
-	case "tcp":
-		return net.Listen(network, address)
-	case "tls":
-		return ListenTLS(address)
-	case "ws":
-		return NewWebsock().Listen(address)
-	default:
-		return nil, errors.New("unsupported Protocol")
-	}
 }
