@@ -1,7 +1,6 @@
 package resock
 
 import (
-	"errors"
 	"io"
 	"log"
 	"net"
@@ -10,23 +9,7 @@ import (
 	"time"
 )
 
-func SelectProtocol(network, address string) (net.Listener, error) {
-	switch network {
-	case "tcp":
-		return net.Listen(network, address)
-	case "tls":
-		return ListenTLS(address)
-	default:
-		return nil, errors.New("unsupported protocol")
-	}
-}
-
-func Run(listener net.Listener, worker func(accpetChan <-chan net.Conn)) error {
-	acceptor(listener, worker)
-	return nil
-}
-
-func acceptor(listen net.Listener, worker func(accpetChan <-chan net.Conn)) {
+func Run(listen net.Listener, worker Worker) {
 	acceptChan := make(chan net.Conn, runtime.NumCPU())
 	for {
 		accept, err := listen.Accept()
@@ -36,7 +19,18 @@ func acceptor(listen net.Listener, worker func(accpetChan <-chan net.Conn)) {
 			continue
 		} else {
 			acceptChan <- accept
-			go worker(acceptChan)
+			go process(acceptChan, worker)
+		}
+	}
+}
+
+func process(cChan <-chan net.Conn, worker Worker) {
+	for local := range cChan {
+		if remote, err := worker(local); err == nil {
+			go relay(local, remote)
+		} else {
+			log.Println(err)
+			local.Close()
 		}
 	}
 }

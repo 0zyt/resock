@@ -1,27 +1,52 @@
 package resock
 
 import (
-	"flag"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io/fs"
+	"net"
+	"os"
 	"sync"
 )
 
-type sockConfig struct {
-	remoteAddr string
-	localAddr  string
-	protocol   string
+type config struct {
+	Server   string
+	Client   string
+	Protocol string
+	Username string
+	Password string
 }
 
 var (
-	cfg *sockConfig
+	cfg *config = &config{}
 	so  sync.Once
 )
 
-func getConfig() *sockConfig {
+func GetCfg() *config {
 	so.Do(func() {
-		local := flag.String("local", "127.0.0.1:1080", "please enter local proxy ip")
-		remote := flag.String("server", "127.0.0.1:2001", "please enter tcp tunnel server ip")
-		protocol := flag.String("protocol", "tcp", "please enter protocol of tunnel tcp or tls")
-		cfg = &sockConfig{*remote, *local, *protocol}
+		if file, err := os.ReadFile("cfg.json"); err == nil {
+			json.Unmarshal(file, cfg)
+			fmt.Println("Init config")
+		}
 	})
 	return cfg
+}
+
+func GenCfg() {
+	b, _ := json.MarshalIndent(&config{Server: "", Client: "2", Protocol: "3", Username: "4", Password: "5"}, " ", " ")
+	os.WriteFile("cfg.json", b, fs.ModePerm)
+}
+
+func SelectProtocol(network, address string) (net.Listener, error) {
+	switch network {
+	case "tcp":
+		return net.Listen(network, address)
+	case "tls":
+		return ListenTLS(address)
+	case "ws":
+		return NewWebsock().Listen(address)
+	default:
+		return nil, errors.New("unsupported Protocol")
+	}
 }

@@ -1,6 +1,8 @@
 package main
 
-import "resock"
+import (
+	"resock"
+)
 
 func main() {
 	resock.RunServer()

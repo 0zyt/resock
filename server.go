@@ -1,29 +1,26 @@
 package resock
 
 import (
+	"errors"
 	"log"
 	"net"
 )
 
 func RunServer() error {
-	listener, err := SelectProtocol(getConfig().protocol, getConfig().remoteAddr)
-	defer listener.Close()
-	if err != nil {
-		log.Println("listen failed:", err)
-		return err
-	}
-	log.Println("listening on " + getConfig().remoteAddr)
-	return Run(listener, socks5ServerWorker)
-}
-
-func socks5ServerWorker(accpetChan <-chan net.Conn) {
-	for client := range accpetChan {
-		dstConn, err := Socks5Connect(client)
+	log.Println("listening on " + GetCfg().Protocol + "://" + GetCfg().Client)
+	switch GetCfg().Protocol {
+	case "tcp":
+		listener, err := net.Listen("tcp", GetCfg().Server)
 		if err != nil {
-			log.Println("Server:" + err.Error())
-			client.Close()
-			continue
+			return errors.New("listen failed:" + err.Error())
 		}
-		go relay(client, dstConn)
+		Run(listener, socks5ServerWorker)
+	default:
+		ws := NewWebsock()
+		_, err := ws.Listen(GetCfg().Server)
+		if err != nil {
+			return errors.New("listen failed:" + err.Error())
+		}
 	}
+	return nil
 }

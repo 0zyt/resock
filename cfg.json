@@ -1,0 +1,7 @@
+{
+  "Server": "127.0.0.1:2001",
+  "Client": "127.0.0.1:1080",
+  "Protocol": "ws",
+  "Username": "",
+  "Password": ""
+ }
