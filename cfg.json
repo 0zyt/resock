@@ -1,7 +1,9 @@
 {
   "Server": "127.0.0.1:2001",
   "Client": "127.0.0.1:1080",
-  "Protocol": "ws",
+  "Protocol": "tcp",
   "Username": "",
-  "Password": ""
+  "Password": "",
+  "Key": "G8MIDsmLgTG+1B/k5BcsXjf7YP1/7TwpIfmp8uNfnBA=",
+  "IsServer": false
  }

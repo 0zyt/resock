@@ -40,17 +40,12 @@ func (w websock) Dial(host, address string) (net.Conn, error) {
 
 func (w *websock) Listen(address string) (net.Listener, error) {
 	w.localAddr = address
-	listen, err := net.Listen("tcp", address)
-	if err != nil {
-		return nil, err
-	}
-	http.Serve(listen, w)
+	http.ListenAndServe(address, w)
 	return w, nil
 }
 
 func (w websock) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	w.remoteAddr = request.Header.Get("X-Forwarded-Host")
-
 	accept, err := websocket.Accept(writer, request, nil)
 	if err != nil {
 		log.Println(err)

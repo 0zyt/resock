@@ -14,6 +14,7 @@ type config struct {
 	Protocol string
 	Username string
 	Password string
+	Key      []byte
 }
 
 var (
@@ -32,6 +33,13 @@ func GetCfg() *config {
 }
 
 func GenCfg() {
-	b, _ := json.MarshalIndent(&config{Server: "", Client: "2", Protocol: "3", Username: "4", Password: "5"}, " ", " ")
+	b, _ := json.MarshalIndent(&config{
+		Server:   "127.0.0.1:2001",
+		Client:   "127.0.0.1:1080",
+		Protocol: "tcp",
+		Username: "",
+		Password: "",
+		Key:      GenKey("🕳")},
+		" ", " ")
 	os.WriteFile("cfg.json", b, fs.ModePerm)
 }

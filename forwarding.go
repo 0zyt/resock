@@ -9,8 +9,23 @@ import (
 	"time"
 )
 
-func Run(listen net.Listener, worker Worker) {
-	acceptChan := make(chan net.Conn, runtime.NumCPU())
+var bufPool sync.Pool
+
+func init() {
+	bufPool.New = func() interface{} {
+		//refer Linux cat /proc/sys/net/core/optmem_max
+		return make([]byte, 20480)
+	}
+}
+func GetBuf() []byte {
+	return bufPool.Get().([]byte)
+}
+func PutBuf(b []byte) {
+	bufPool.Put(b)
+}
+
+func Run(listen net.Listener, worker Worker, isServer bool) {
+	acChan := make(chan net.Conn, runtime.NumCPU())
 	for {
 		accept, err := listen.Accept()
 		if err != nil {
@@ -18,14 +33,22 @@ func Run(listen net.Listener, worker Worker) {
 			accept.Close()
 			continue
 		} else {
-			acceptChan <- accept
-			go process(acceptChan, worker)
+			if isServer {
+				var err error
+				accept, err = NewChacha20Stream(GetCfg().Key, accept)
+				if err != nil {
+					log.Println(err)
+					continue
+				}
+			}
+			acChan <- accept
+			go process(acChan, worker)
 		}
 	}
 }
 
-func process(cChan <-chan net.Conn, worker Worker) {
-	for local := range cChan {
+func process(acChan <-chan net.Conn, worker Worker) {
+	for local := range acChan {
 		if remote, err := worker(local); err == nil {
 			go relay(local, remote)
 		} else {
@@ -41,11 +64,12 @@ func relay(src, dst net.Conn) {
 	wg := sync.WaitGroup{}
 
 	forward := func(src, dst net.Conn) {
-		buf := bufferPoolGet()
+		buf := GetBuf()
 		defer wg.Done()
-		defer bufferPoolPut(buf)
+		defer PutBuf(buf)
 		src.SetDeadline(time.Now().Add(5 * time.Second))
-		io.Copy(src, dst)
+		//io.Copy(src, dst)
+		io.CopyBuffer(src, dst, GetBuf())
 
 	}
 

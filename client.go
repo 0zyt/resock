@@ -15,9 +15,9 @@ func RunClient() error {
 	log.Println("listening on " + GetCfg().Protocol + "://" + GetCfg().Client)
 	switch GetCfg().Protocol {
 	case "tcp":
-		Run(listener, socks5ClientWorker)
+		Run(listener, socks5ClientWorker, false)
 	default:
-		Run(listener, wsClientWorker)
+		Run(listener, wsClientWorker, false)
 	}
 	return nil
 }
