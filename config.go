@@ -14,6 +14,7 @@ type config struct {
 	Protocol string
 	Username string
 	Password string
+	SNI      string
 	Key      []byte
 }
 
@@ -34,11 +35,12 @@ func GetCfg() *config {
 
 func GenCfg() {
 	b, _ := json.MarshalIndent(&config{
-		Server:   "127.0.0.1:2001",
+		Server:   "127.0.0.1:443",
 		Client:   "127.0.0.1:1080",
 		Protocol: "tcp",
 		Username: "",
 		Password: "",
+		SNI:      "http://mirror.centos.org/",
 		Key:      GenKey("🕳")},
 		" ", " ")
 	os.WriteFile("cfg.json", b, fs.ModePerm)

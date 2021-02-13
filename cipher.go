@@ -11,6 +11,8 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"nhooyr.io/websocket"
 	"os"
 	"time"
@@ -35,7 +37,7 @@ func getClientCert() *tls.Config {
 		RootCAs:            clientCertPool,
 		Certificates:       []tls.Certificate{cert},
 		InsecureSkipVerify: true,
-		CipherSuites:       []uint16{tls.TLS_CHACHA20_POLY1305_SHA256},
+		ServerName:         GetCfg().SNI,
 	}
 }
 
@@ -69,7 +71,12 @@ func ListenTLS(address string) (net.Listener, error) {
 
 func (w *websock) ListenTLS(address string) (net.Listener, error) {
 	w.localAddr = address
-	http.ListenAndServeTLS(address, "certs/server.pem", "certs/server.key", w)
+	http.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
+		parse, _ := url.Parse(GetCfg().SNI)
+		httputil.NewSingleHostReverseProxy(parse).ServeHTTP(writer, request)
+	})
+	http.Handle("/wss", w)
+	http.ListenAndServeTLS(address, "certs/server.pem", "certs/server.key", nil)
 	return w, nil
 }
 

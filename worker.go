@@ -38,5 +38,5 @@ func wssClientWorker(conn net.Conn) (net.Conn, error) {
 	if err != nil {
 		return nil, errors.New("socks5 handshake " + err.Error())
 	}
-	return ws.DialTLS(connect, "wss://"+GetCfg().Server)
+	return ws.DialTLS(connect, "wss://"+GetCfg().Server+"/wss")
 }

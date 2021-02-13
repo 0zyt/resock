@@ -15,6 +15,12 @@ func RunServer() error {
 			return errors.New("listen failed:" + err.Error())
 		}
 		Run(listener, socks5ServerWorker, true)
+	case "wss":
+		ws := NewWebsock()
+		_, err := ws.ListenTLS(GetCfg().Server)
+		if err != nil {
+			return errors.New("listen failed:" + err.Error())
+		}
 	default:
 		ws := NewWebsock()
 		_, err := ws.Listen(GetCfg().Server)

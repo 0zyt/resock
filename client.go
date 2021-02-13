@@ -16,6 +16,8 @@ func RunClient() error {
 	switch GetCfg().Protocol {
 	case "tcp":
 		Run(listener, socks5ClientWorker, false)
+	case "wss":
+		Run(listener, wssClientWorker, false)
 	default:
 		Run(listener, wsClientWorker, false)
 	}
