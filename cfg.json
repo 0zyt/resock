@@ -1,7 +1,7 @@
 {
   "Server": "127.0.0.1:443",
   "Client": "127.0.0.1:1080",
-  "Protocol": "wss",
+  "Protocol": "tcp",
   "Username": "",
   "Password": "",
   "SNI": "http://mirror.centos.org",

@@ -9,6 +9,8 @@ import (
 	"time"
 )
 
+var acChan chan net.Conn
+
 var bufPool sync.Pool
 
 func init() {
@@ -24,8 +26,17 @@ func PutBuf(b []byte) {
 	bufPool.Put(b)
 }
 
-func Run(listen net.Listener, worker Worker, isServer bool) {
-	acChan := make(chan net.Conn, runtime.NumCPU())
+func RunGroup(nums int, listen net.Listener, worker Worker, isServer bool) {
+	acChan = make(chan net.Conn, runtime.NumCPU())
+	wg := sync.WaitGroup{}
+	wg.Add(nums)
+	for i := 0; i < nums; i++ {
+		go acceptor(listen, worker, isServer, wg)
+	}
+	wg.Wait()
+}
+
+func acceptor(listen net.Listener, worker Worker, isServer bool, wg sync.WaitGroup) {
 	for {
 		accept, err := listen.Accept()
 		if err != nil {
@@ -45,6 +56,7 @@ func Run(listen net.Listener, worker Worker, isServer bool) {
 			go process(acChan, worker)
 		}
 	}
+	wg.Done()
 }
 
 func process(acChan <-chan net.Conn, worker Worker) {

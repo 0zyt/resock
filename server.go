@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log"
 	"net"
+	"runtime"
 )
 
 func RunServer() error {
@@ -14,7 +15,7 @@ func RunServer() error {
 		if err != nil {
 			return errors.New("listen failed:" + err.Error())
 		}
-		Run(listener, socks5ServerWorker, true)
+		RunGroup(runtime.NumCPU(), listener, socks5ServerWorker, true)
 	case "wss":
 		ws := NewWebsock()
 		_, err := ws.ListenTLS(GetCfg().Server)

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log"
 	"net"
+	"runtime"
 )
 
 func RunClient() error {
@@ -15,11 +16,11 @@ func RunClient() error {
 	log.Println("listening on " + GetCfg().Protocol + "://" + GetCfg().Client)
 	switch GetCfg().Protocol {
 	case "tcp":
-		Run(listener, socks5ClientWorker, false)
+		RunGroup(runtime.NumCPU(), listener, socks5ClientWorker, false)
 	case "wss":
-		Run(listener, wssClientWorker, false)
+		RunGroup(runtime.NumCPU(), listener, wssClientWorker, false)
 	default:
-		Run(listener, wsClientWorker, false)
+		RunGroup(runtime.NumCPU(), listener, wsClientWorker, false)
 	}
 	return nil
 }
