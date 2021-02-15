@@ -34,9 +34,10 @@ func GetCfg() *config {
 }
 
 func GenCfg() {
+	//example
 	b, _ := json.MarshalIndent(&config{
-		Server:   "127.0.0.1:443",
-		Client:   "127.0.0.1:1080",
+		Server:   "0.0.0.0:443",
+		Client:   "0.0.0.0:1080",
 		Protocol: "tcp",
 		Username: "",
 		Password: "",

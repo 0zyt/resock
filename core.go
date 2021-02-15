@@ -29,14 +29,15 @@ func PutBuf(b []byte) {
 func RunGroup(nums int, listen net.Listener, worker Worker, isServer bool) {
 	acChan = make(chan net.Conn, runtime.NumCPU())
 	wg := sync.WaitGroup{}
+	defer wg.Wait()
 	wg.Add(nums)
 	for i := 0; i < nums; i++ {
 		go acceptor(listen, worker, isServer, wg)
 	}
-	wg.Wait()
 }
 
 func acceptor(listen net.Listener, worker Worker, isServer bool, wg sync.WaitGroup) {
+	defer wg.Done()
 	for {
 		accept, err := listen.Accept()
 		if err != nil {
@@ -56,7 +57,6 @@ func acceptor(listen net.Listener, worker Worker, isServer bool, wg sync.WaitGro
 			go process(acChan, worker)
 		}
 	}
-	wg.Done()
 }
 
 func process(acChan <-chan net.Conn, worker Worker) {

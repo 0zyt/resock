@@ -1,5 +1,5 @@
 # resock
-resock is a proxy that support SOCKS5 and Websockets
+resock is a high performance proxy that support SOCKS5 and Websockets
 
 ## Requirement: 
 Go 1.16 
@@ -17,8 +17,8 @@ go run cmd/client/Client.go
 cfg.json:
 ```json5
 {
-  "Server": "127.0.0.1:2001", //Server's listening IP address
-  "Client": "127.0.0.1:1080",//Client local listening IP address
+  "Server": "0.0.0.0:2001", //Server's listening IP address
+  "Client": "0.0.0.0:1080",//Client local listening IP address
   "Protocol": "tcp",//ws,wss or tcp
   "Username": "",
   "Password": "",
