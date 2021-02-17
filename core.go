@@ -2,6 +2,7 @@ package resock
 
 import (
 	"io"
+	"io/ioutil"
 	"log"
 	"net"
 	"runtime"
@@ -65,6 +66,12 @@ func process(acChan <-chan net.Conn, worker Worker) {
 			go relay(local, remote)
 		} else {
 			log.Println(err)
+			buf := GetBuf()
+			defer PutBuf(buf)
+			_, err = io.CopyBuffer(ioutil.Discard, local, buf)
+			if err != nil {
+				log.Println(err)
+			}
 			local.Close()
 		}
 	}

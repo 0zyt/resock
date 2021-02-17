@@ -8,35 +8,43 @@ import (
 type Worker func(conn net.Conn) (net.Conn, error)
 
 func socks5ServerWorker(conn net.Conn) (net.Conn, error) {
-	dstAddr, err := Socks5Connect(conn)
+	buf := GetBuf()
+	defer PutBuf(buf)
+	addr, err := readAddr(buf, conn)
 	if err != nil {
-		return nil, errors.New("socks5 handshake " + err.Error())
+		return nil, errors.New("SOCKS error:" + err.Error())
 	}
-	return net.Dial("tcp", dstAddr)
+	return net.Dial("tcp", addr.String())
 }
 
 func socks5ClientWorker(conn net.Conn) (net.Conn, error) {
+	host, err := Socks5Connect1(conn)
+	if err != nil {
+		return nil, errors.New("SOCKS error:" + err.Error())
+	}
 	dial, err := net.Dial("tcp", GetCfg().Server)
 	if err != nil {
 		return nil, err
 	}
-	return NewChacha20Stream(GetCfg().Key, dial)
+	stream, err := NewChacha20Stream(GetCfg().Key, dial)
+	stream.Write(host)
+	return stream, err
 }
 
 func wsClientWorker(conn net.Conn) (net.Conn, error) {
 	ws := NewWebsock()
-	connect, err := Socks5Connect(conn)
+	host, err := Socks5Connect(conn)
 	if err != nil {
 		return nil, errors.New("socks5 handshake " + err.Error())
 	}
-	return ws.DialTLS(connect, "ws://"+GetCfg().Server)
+	return ws.DialTLS(host, "ws://"+GetCfg().Server)
 }
 
 func wssClientWorker(conn net.Conn) (net.Conn, error) {
 	ws := NewWebsock()
-	connect, err := Socks5Connect(conn)
+	host, err := Socks5Connect(conn)
 	if err != nil {
 		return nil, errors.New("socks5 handshake " + err.Error())
 	}
-	return ws.DialTLS(connect, "wss://"+GetCfg().Server+"/wss")
+	return ws.DialTLS(host, "wss://"+GetCfg().Server+"/wss")
 }
