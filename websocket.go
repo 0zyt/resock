@@ -38,10 +38,9 @@ func (w websock) Dial(host, address string) (net.Conn, error) {
 	return w.Conn, nil
 }
 
-func (w *websock) Listen(address string) (net.Listener, error) {
+func (w *websock) Listen(address string) error {
 	w.localAddr = address
-	http.ListenAndServe(address, w)
-	return w, nil
+	return http.ListenAndServe(address, w)
 }
 
 func (w websock) ServeHTTP(writer http.ResponseWriter, request *http.Request) {

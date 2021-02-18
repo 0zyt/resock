@@ -7,6 +7,52 @@ import (
 
 type Worker func(conn net.Conn) (net.Conn, error)
 
+type Workers struct {
+	in   []*Worker
+	out  []*Worker
+	host Addr
+}
+
+func (p *Workers) Filter(conn net.Conn, isServr bool) (net.Conn, error) {
+	var err error
+	var pipe = p.out
+	if isServr {
+		pipe = p.in
+	}
+	for _, worker := range pipe {
+		conn, err = (*worker)(conn)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return conn, nil
+}
+
+func (p *Workers) AddOut(w ...*Worker) {
+	p.out = append(p.out, w...)
+}
+
+func (p *Workers) AddIn(w ...*Worker) {
+	p.in = append(p.in, w...)
+}
+
+func (p Workers) Add(in []*Worker, out []*Worker) {
+	if in != nil {
+		p.AddIn(in...)
+	}
+	if out != nil {
+		p.AddOut(out...)
+	}
+}
+
+func chacha20Worker(conn net.Conn) (net.Conn, error) {
+	return NewChacha20Stream(GetCfg().Key, conn)
+}
+
+func basicTCPWorker(conn net.Conn) (net.Conn, error) {
+	return net.Dial("tcp", GetCfg().Server)
+}
+
 func socks5ServerWorker(conn net.Conn) (net.Conn, error) {
 	buf := GetBuf()
 	defer PutBuf(buf)
@@ -22,18 +68,24 @@ func socks5ClientWorker(conn net.Conn) (net.Conn, error) {
 	if err != nil {
 		return nil, err
 	}
-	host, err := Socks5Connect(conn)
+	host, err := Socks5Handshake(conn)
 	if err != nil {
 		return nil, errors.New("SOCKS error:" + err.Error())
 	}
 	dstStream, err := NewChacha20Stream(GetCfg().Key, dial)
-	dstStream.Write(host)
-	return dstStream, err
+	if err != nil {
+		return nil, err
+	}
+	_, err = dstStream.Write(host)
+	if err != nil {
+		return nil, err
+	}
+	return dstStream, nil
 }
 
 func wsClientWorker(conn net.Conn) (net.Conn, error) {
 	ws := NewWebsock()
-	host, err := Socks5Connect(conn)
+	host, err := Socks5Handshake(conn)
 	if err != nil {
 		return nil, errors.New("SOCKS error:" + err.Error())
 	}
@@ -42,7 +94,7 @@ func wsClientWorker(conn net.Conn) (net.Conn, error) {
 
 func wssClientWorker(conn net.Conn) (net.Conn, error) {
 	ws := NewWebsock()
-	host, err := Socks5Connect(conn)
+	host, err := Socks5Handshake(conn)
 	if err != nil {
 		return nil, errors.New("SOCKS error:" + err.Error())
 	}

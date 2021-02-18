@@ -69,15 +69,14 @@ func ListenTLS(address string) (net.Listener, error) {
 	return tls.Listen("tcp", address, config)
 }
 
-func (w *websock) ListenTLS(address string) (net.Listener, error) {
+func (w *websock) ListenTLS(address string) error {
 	w.localAddr = address
 	http.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
 		parse, _ := url.Parse(GetCfg().SNI)
 		httputil.NewSingleHostReverseProxy(parse).ServeHTTP(writer, request)
 	})
 	http.Handle("/wss", w)
-	http.ListenAndServeTLS(address, "certs/server.pem", "certs/server.key", nil)
-	return w, nil
+	return http.ListenAndServeTLS(address, "certs/server.pem", "certs/server.key", nil)
 }
 
 func (w websock) DialTLS(host, address string) (net.Conn, error) {
@@ -157,7 +156,7 @@ func (s *Chacha20Stream) SetWriteDeadline(t time.Time) error {
 func (s *Chacha20Stream) Read(p []byte) (int, error) {
 	if s.decoder == nil {
 		nonce := make([]byte, chacha20.NonceSizeX)
-		if n, err := io.ReadAtLeast(s.conn, nonce, len(nonce)); err != nil || n != len(nonce) {
+		if n, err := io.ReadFull(s.conn, nonce); err != nil || n != len(nonce) {
 			return n, errors.New("can't read nonce from stream: " + err.Error())
 		}
 		decoder, err := chacha20.NewUnauthenticatedCipher(s.key, nonce)

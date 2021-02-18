@@ -7,7 +7,7 @@ import (
 	"net"
 )
 
-func Socks5Connect(conn net.Conn) (Addr, error) {
+func Socks5Handshake(conn net.Conn) (Addr, error) {
 	if err := socks5Auth(conn); err == nil {
 		dstConn, err := socks5Requests(conn)
 		if err != nil {
