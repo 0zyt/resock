@@ -28,7 +28,7 @@ func PutBuf(b []byte) {
 
 func RunGroup(nums int, listen net.Listener, worker Worker, isServer bool) {
 	acChan = make(chan net.Conn, runtime.NumCPU())
-	wg := sync.WaitGroup{}
+	wg := &sync.WaitGroup{}
 	defer wg.Wait()
 	wg.Add(nums)
 	for i := 0; i < nums; i++ {
@@ -36,7 +36,7 @@ func RunGroup(nums int, listen net.Listener, worker Worker, isServer bool) {
 	}
 }
 
-func acceptor(listen net.Listener, worker Worker, isServer bool, wg sync.WaitGroup) {
+func acceptor(listen net.Listener, worker Worker, isServer bool, wg *sync.WaitGroup) {
 	defer wg.Done()
 	for {
 		accept, err := listen.Accept()

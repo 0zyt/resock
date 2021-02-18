@@ -1,9 +1,12 @@
 package main
 
 import (
+	"log"
 	"resock"
 )
 
 func main() {
-	resock.RunServer()
+	if err := resock.RunServer(); err != nil {
+		log.Fatalln(err)
+	}
 }
