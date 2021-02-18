@@ -8,19 +8,19 @@ import (
 type Worker func(conn net.Conn) (net.Conn, error)
 
 type Workers struct {
-	in   []*Worker
-	out  []*Worker
+	in   []Worker
+	out  []Worker
 	host Addr
 }
 
-func (p *Workers) Filter(conn net.Conn, isServr bool) (net.Conn, error) {
+func (p *Workers) Filter(conn net.Conn, isSrv bool) (net.Conn, error) {
 	var err error
 	var pipe = p.out
-	if isServr {
+	if isSrv {
 		pipe = p.in
 	}
 	for _, worker := range pipe {
-		conn, err = (*worker)(conn)
+		conn, err = worker(conn)
 		if err != nil {
 			return nil, err
 		}
@@ -28,15 +28,15 @@ func (p *Workers) Filter(conn net.Conn, isServr bool) (net.Conn, error) {
 	return conn, nil
 }
 
-func (p *Workers) AddOut(w ...*Worker) {
+func (p *Workers) AddOut(w ...Worker) {
 	p.out = append(p.out, w...)
 }
 
-func (p *Workers) AddIn(w ...*Worker) {
+func (p *Workers) AddIn(w ...Worker) {
 	p.in = append(p.in, w...)
 }
 
-func (p Workers) Add(in []*Worker, out []*Worker) {
+func (p Workers) Add(in []Worker, out []Worker) {
 	if in != nil {
 		p.AddIn(in...)
 	}
@@ -45,11 +45,51 @@ func (p Workers) Add(in []*Worker, out []*Worker) {
 	}
 }
 
+func socks5CWorkers() *Workers {
+	p := &Workers{}
+	logical1Worker := func(conn net.Conn) (net.Conn, error) {
+		host, err := Socks5Handshake(conn)
+		if err != nil {
+			return nil, errors.New("SOCKS error:" + err.Error())
+		}
+		p.host = host
+		return conn, nil
+	}
+	logical2Worker := func(conn net.Conn) (net.Conn, error) {
+		_, err := conn.Write(p.host)
+		if err != nil {
+			return nil, err
+		}
+		return conn, nil
+	}
+	p.AddOut(logical1Worker, basicTCPToSrvWorker, chacha20Worker, logical2Worker)
+	return p
+}
+
+func socks5SWorkers() *Workers {
+	p := &Workers{}
+	p.AddIn(chacha20Worker)
+	p.AddOut(func(conn net.Conn) (net.Conn, error) {
+		buf := GetBuf()
+		defer PutBuf(buf)
+		addr, err := readAddr(buf, conn)
+		if err != nil {
+			return nil, errors.New("SOCKS error:" + err.Error())
+		}
+		p.host = addr
+		return conn, nil
+	},
+		func(conn net.Conn) (net.Conn, error) {
+			return net.Dial("tcp", p.host.String())
+		})
+	return p
+}
+
 func chacha20Worker(conn net.Conn) (net.Conn, error) {
 	return NewChacha20Stream(GetCfg().Key, conn)
 }
 
-func basicTCPWorker(conn net.Conn) (net.Conn, error) {
+func basicTCPToSrvWorker(conn net.Conn) (net.Conn, error) {
 	return net.Dial("tcp", GetCfg().Server)
 }
 
@@ -89,7 +129,7 @@ func wsClientWorker(conn net.Conn) (net.Conn, error) {
 	if err != nil {
 		return nil, errors.New("SOCKS error:" + err.Error())
 	}
-	return ws.DialTLS(host.String(), "ws://"+GetCfg().Server)
+	return ws.Dial(host.String(), "ws://"+GetCfg().Server)
 }
 
 func wssClientWorker(conn net.Conn) (net.Conn, error) {

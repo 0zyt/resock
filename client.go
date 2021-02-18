@@ -9,18 +9,18 @@ import (
 
 func RunClient() error {
 	listener, err := net.Listen("tcp", GetCfg().Client)
-	defer listener.Close()
 	if err != nil {
 		return errors.New("listen failed:" + err.Error())
 	}
+	defer listener.Close()
 	log.Println("listening on " + GetCfg().Protocol + "://" + GetCfg().Client)
 	switch GetCfg().Protocol {
 	case "tcp":
-		RunGroup(runtime.NumCPU(), listener, socks5ClientWorker, false)
+		RunGroup(runtime.NumCPU(), listener, socks5CWorkers(), false)
 	case "wss":
-		RunGroup(runtime.NumCPU(), listener, wssClientWorker, false)
+		//RunGroup(runtime.NumCPU(), listener, wssClientWorker, false)
 	default:
-		RunGroup(runtime.NumCPU(), listener, wsClientWorker, false)
+		//RunGroup(runtime.NumCPU(), listener, wsClientWorker, false)
 	}
 	return nil
 }

@@ -26,7 +26,7 @@ func PutBuf(b []byte) {
 	bufPool.Put(b)
 }
 
-func RunGroup(nums int, listen net.Listener, worker Worker, isServer bool) {
+func RunGroup(nums int, listen net.Listener, worker *Workers, isServer bool) {
 	acChan = make(chan net.Conn, runtime.NumCPU())
 	wg := &sync.WaitGroup{}
 	defer wg.Wait()
@@ -36,7 +36,7 @@ func RunGroup(nums int, listen net.Listener, worker Worker, isServer bool) {
 	}
 }
 
-func acceptor(listen net.Listener, worker Worker, isServer bool, wg *sync.WaitGroup) {
+func acceptor(listen net.Listener, worker *Workers, isSrv bool, wg *sync.WaitGroup) {
 	defer wg.Done()
 	for {
 		accept, err := listen.Accept()
@@ -45,9 +45,9 @@ func acceptor(listen net.Listener, worker Worker, isServer bool, wg *sync.WaitGr
 			accept.Close()
 			continue
 		} else {
-			if isServer {
+			if isSrv {
 				var err error
-				accept, err = NewChacha20Stream(GetCfg().Key, accept)
+				accept, err = worker.Filter(accept, isSrv)
 				if err != nil {
 					log.Println(err)
 					continue
@@ -59,9 +59,9 @@ func acceptor(listen net.Listener, worker Worker, isServer bool, wg *sync.WaitGr
 	}
 }
 
-func process(acChan <-chan net.Conn, worker Worker) {
+func process(acChan <-chan net.Conn, worker *Workers) {
 	for local := range acChan {
-		if remote, err := worker(local); err == nil {
+		if remote, err := worker.Filter(local, false); err == nil {
 			go relay(local, remote)
 		} else {
 			log.Println(err)
