@@ -15,7 +15,7 @@ func RunServer() error {
 		if err != nil {
 			return errors.New("listen failed:" + err.Error())
 		}
-		RunGroup(runtime.NumCPU(), listener, socks5SWorkers(), true)
+		RunGroup(runtime.NumCPU(), listener, socksSrvPipe(), true)
 	case "wss":
 		ws := NewWebsock()
 		if err := ws.ListenTLS(GetCfg().Server); err != nil {

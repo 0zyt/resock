@@ -1,19 +1,20 @@
 package resock
 
 import (
+	"context"
 	"errors"
 	"net"
 )
 
 type Worker func(conn net.Conn) (net.Conn, error)
 
-type Workers struct {
-	in   []Worker
-	out  []Worker
-	host Addr
+type Pipeline struct {
+	in  []Worker
+	out []Worker
+	ctx context.Context
 }
 
-func (p *Workers) Filter(conn net.Conn, isSrv bool) (net.Conn, error) {
+func (p *Pipeline) Filter(conn net.Conn, isSrv bool) (net.Conn, error) {
 	var err error
 	var pipe = p.out
 	if isSrv {
@@ -28,15 +29,15 @@ func (p *Workers) Filter(conn net.Conn, isSrv bool) (net.Conn, error) {
 	return conn, nil
 }
 
-func (p *Workers) AddOut(w ...Worker) {
+func (p *Pipeline) AddOut(w ...Worker) {
 	p.out = append(p.out, w...)
 }
 
-func (p *Workers) AddIn(w ...Worker) {
+func (p *Pipeline) AddIn(w ...Worker) {
 	p.in = append(p.in, w...)
 }
 
-func (p Workers) Add(in []Worker, out []Worker) {
+func (p *Pipeline) Add(in []Worker, out []Worker) {
 	if in != nil {
 		p.AddIn(in...)
 	}
@@ -45,18 +46,20 @@ func (p Workers) Add(in []Worker, out []Worker) {
 	}
 }
 
-func socks5CWorkers() *Workers {
-	p := &Workers{}
+func socksLocalPipe() *Pipeline {
+	p := &Pipeline{}
 	logical1Worker := func(conn net.Conn) (net.Conn, error) {
 		host, err := Socks5Handshake(conn)
 		if err != nil {
 			return nil, errors.New("SOCKS error:" + err.Error())
 		}
-		p.host = host
+		p.ctx = context.WithValue(context.Background(), "host", host)
 		return conn, nil
 	}
 	logical2Worker := func(conn net.Conn) (net.Conn, error) {
-		_, err := conn.Write(p.host)
+		host := p.ctx.Value("host").(Addr)
+
+		_, err := conn.Write(host)
 		if err != nil {
 			return nil, err
 		}
@@ -66,22 +69,35 @@ func socks5CWorkers() *Workers {
 	return p
 }
 
-func socks5SWorkers() *Workers {
-	p := &Workers{}
+func socksSrvPipe() *Pipeline {
+	p := &Pipeline{}
 	p.AddIn(chacha20Worker)
 	p.AddOut(func(conn net.Conn) (net.Conn, error) {
 		buf := GetBuf()
 		defer PutBuf(buf)
 		addr, err := readAddr(buf, conn)
+
 		if err != nil {
 			return nil, errors.New("SOCKS error:" + err.Error())
 		}
-		p.host = addr
+
+		p.ctx = context.WithValue(context.Background(), "host", addr)
 		return conn, nil
 	},
 		func(conn net.Conn) (net.Conn, error) {
-			return net.Dial("tcp", p.host.String())
+			host := p.ctx.Value("host").(Addr)
+			return net.Dial("tcp", host.String())
 		})
+	return p
+}
+
+func wsLocalPipe(isTLS bool) *Pipeline {
+	p := &Pipeline{}
+	if isTLS {
+		p.AddOut(wssLocalWorker)
+	} else {
+		p.AddOut(wsLocalWorker)
+	}
 	return p
 }
 
@@ -123,7 +139,7 @@ func socks5ClientWorker(conn net.Conn) (net.Conn, error) {
 	return dstStream, nil
 }
 
-func wsClientWorker(conn net.Conn) (net.Conn, error) {
+func wsLocalWorker(conn net.Conn) (net.Conn, error) {
 	ws := NewWebsock()
 	host, err := Socks5Handshake(conn)
 	if err != nil {
@@ -132,7 +148,7 @@ func wsClientWorker(conn net.Conn) (net.Conn, error) {
 	return ws.Dial(host.String(), "ws://"+GetCfg().Server)
 }
 
-func wssClientWorker(conn net.Conn) (net.Conn, error) {
+func wssLocalWorker(conn net.Conn) (net.Conn, error) {
 	ws := NewWebsock()
 	host, err := Socks5Handshake(conn)
 	if err != nil {

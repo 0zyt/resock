@@ -16,11 +16,11 @@ func RunClient() error {
 	log.Println("listening on " + GetCfg().Protocol + "://" + GetCfg().Client)
 	switch GetCfg().Protocol {
 	case "tcp":
-		RunGroup(runtime.NumCPU(), listener, socks5CWorkers(), false)
+		RunGroup(runtime.NumCPU(), listener, socksLocalPipe(), false)
 	case "wss":
-		//RunGroup(runtime.NumCPU(), listener, wssClientWorker, false)
+		RunGroup(runtime.NumCPU(), listener, wsLocalPipe(true), false)
 	default:
-		//RunGroup(runtime.NumCPU(), listener, wsClientWorker, false)
+		RunGroup(runtime.NumCPU(), listener, wsLocalPipe(false), false)
 	}
 	return nil
 }

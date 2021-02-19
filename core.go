@@ -26,17 +26,17 @@ func PutBuf(b []byte) {
 	bufPool.Put(b)
 }
 
-func RunGroup(nums int, listen net.Listener, worker *Workers, isServer bool) {
+func RunGroup(nums int, listen net.Listener, workers *Pipeline, isServer bool) {
 	acChan = make(chan net.Conn, runtime.NumCPU())
 	wg := &sync.WaitGroup{}
 	defer wg.Wait()
 	wg.Add(nums)
 	for i := 0; i < nums; i++ {
-		go acceptor(listen, worker, isServer, wg)
+		go acceptor(listen, workers, isServer, wg)
 	}
 }
 
-func acceptor(listen net.Listener, worker *Workers, isSrv bool, wg *sync.WaitGroup) {
+func acceptor(listen net.Listener, pipe *Pipeline, isSrv bool, wg *sync.WaitGroup) {
 	defer wg.Done()
 	for {
 		accept, err := listen.Accept()
@@ -47,24 +47,26 @@ func acceptor(listen net.Listener, worker *Workers, isSrv bool, wg *sync.WaitGro
 		} else {
 			if isSrv {
 				var err error
-				accept, err = worker.Filter(accept, isSrv)
+				accept, err = pipe.Filter(accept, isSrv)
 				if err != nil {
 					log.Println(err)
 					continue
 				}
 			}
 			acChan <- accept
-			go process(acChan, worker)
+			go process(acChan, pipe)
 		}
 	}
 }
 
-func process(acChan <-chan net.Conn, worker *Workers) {
+func process(acChan <-chan net.Conn, pipe *Pipeline) {
+	//如果收到请求是经过加密或者其他操作，需要先统一在上面的流水线里对Conn进行相关的转换,保证这里读到的是正确是数据
 	for local := range acChan {
-		if remote, err := worker.Filter(local, false); err == nil {
+		if remote, err := pipe.Filter(local, false); err == nil {
 			go relay(local, remote)
 		} else {
 			log.Println(err)
+			//如果出现错误，把这次的请求全丢掉，清空缓冲区
 			io.Copy(io.Discard, local)
 			local.Close()
 		}
