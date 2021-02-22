@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-var acChan chan net.Conn
+var globalCh chan net.Conn
 
 var bufPool sync.Pool
 
@@ -27,12 +27,18 @@ func PutBuf(b []byte) {
 }
 
 func RunGroup(nums int, listen net.Listener, workers *Pipeline, isServer bool) {
-	acChan = make(chan net.Conn, runtime.NumCPU())
+	globalCh = make(chan net.Conn, 65535)
 	wg := &sync.WaitGroup{}
 	defer wg.Wait()
 	wg.Add(nums)
 	for i := 0; i < nums; i++ {
 		go acceptor(listen, workers, isServer, wg)
+	}
+}
+
+func dispatch(localCh chan<- net.Conn) {
+	for conn := range globalCh {
+		localCh <- conn
 	}
 }
 
@@ -53,15 +59,17 @@ func acceptor(listen net.Listener, pipe *Pipeline, isSrv bool, wg *sync.WaitGrou
 					continue
 				}
 			}
-			acChan <- accept
-			go process(acChan, pipe)
+			globalCh <- accept
+			go process(pipe)
 		}
 	}
 }
 
-func process(acChan <-chan net.Conn, pipe *Pipeline) {
+func process(pipe *Pipeline) {
+	localCh := make(chan net.Conn, runtime.NumCPU())
+	go dispatch(localCh)
 	//如果收到请求是经过加密或者其他操作，需要先统一在上面的流水线里对Conn进行相关的转换,保证这里读到的是正确是数据
-	for local := range acChan {
+	for local := range localCh {
 		if remote, err := pipe.Filter(local, false); err == nil {
 			go relay(local, remote)
 		} else {

@@ -86,6 +86,9 @@ func socksSrvPipe() *Pipeline {
 	},
 		func(conn net.Conn) (net.Conn, error) {
 			host := p.ctx.Value("host").(Addr)
+			if "" == host.String() {
+				return nil, errors.New("dst addr parse error")
+			}
 			return net.Dial("tcp", host.String())
 		})
 	return p

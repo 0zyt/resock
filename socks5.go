@@ -50,7 +50,10 @@ func (buf Addr) String() string {
 	case 4:
 		dstAddr.IP = []byte(buf[1 : net.IPv6len+1])
 	case 3:
-		ipAddr, _ := net.ResolveIPAddr("ip", string(buf[2:n-2]))
+		ipAddr, err := net.ResolveIPAddr("ip", string(buf[2:n-2]))
+		if err != nil {
+			return ""
+		}
 		dstAddr.IP = ipAddr.IP
 	}
 	dstAddr.Port = int(binary.BigEndian.Uint16(buf[n-2:]))
