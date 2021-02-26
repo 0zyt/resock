@@ -1,5 +1,5 @@
 # resock
-resock is a high performance proxy that support SOCKS5 and Websockets
+resock is a high performance proxy that supports SOCKS5 and Websockets which use little goroutine do many processing.
 
 ## Requirement: 
 Go 1.16 

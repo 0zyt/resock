@@ -76,7 +76,11 @@ func readAddr(buf []byte, r io.Reader) (Addr, error) {
 	if err != nil {
 		return nil, err
 	}
-	switch buf[0] {
+	atyp := buf[0]
+	if atyp != 1 || atyp != 3 || atyp != 4 {
+		return nil, errors.New("Unsupported address types")
+	}
+	switch atyp {
 	case 1:
 		_, err = r.Read(buf[1 : 1+net.IPv4len+2])
 		return buf[:1+net.IPv4len+2], err
