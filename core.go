@@ -1,10 +1,12 @@
 package resock
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"net"
 	"runtime"
+	"runtime/pprof"
 	"sync"
 	"time"
 )
@@ -33,12 +35,14 @@ func RunGroup(nums int, listen net.Listener, workers *Pipeline, isServer bool) {
 	wg.Add(nums)
 	for i := 0; i < nums; i++ {
 		go acceptor(listen, workers, isServer, wg)
+		go process(workers)
 	}
 }
 
 func dispatch(localCh chan<- net.Conn) {
 	for conn := range globalCh {
 		localCh <- conn
+		fmt.Println(pprof.Lookup("threadcreate").Count())
 	}
 }
 
@@ -60,7 +64,6 @@ func acceptor(listen net.Listener, pipe *Pipeline, isSrv bool, wg *sync.WaitGrou
 				}
 			}
 			globalCh <- accept
-			go process(pipe)
 		}
 	}
 }
