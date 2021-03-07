@@ -58,7 +58,6 @@ func socksLocalPipe() *Pipeline {
 	}
 	logical2Worker := func(conn net.Conn) (net.Conn, error) {
 		host := p.ctx.Value("host").(Addr)
-
 		_, err := conn.Write(host)
 		if err != nil {
 			return nil, err

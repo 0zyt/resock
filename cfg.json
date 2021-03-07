@@ -2,8 +2,6 @@
   "Server": "0.0.0.0:443",
   "Client": "0.0.0.0:1080",
   "Protocol": "tcp",
-  "Username": "",
-  "Password": "",
-  "SNI": "http://mirror.centos.org",
+  "SNI": "http://mirror.centos.org/",
   "Key": "G8MIDsmLgTG+1B/k5BcsXjf7YP1/7TwpIfmp8uNfnBA="
  }

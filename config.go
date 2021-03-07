@@ -12,8 +12,6 @@ type config struct {
 	Server   string
 	Client   string
 	Protocol string
-	Username string
-	Password string
 	SNI      string
 	Key      []byte
 }
@@ -33,14 +31,12 @@ func GetCfg() *config {
 	return cfg
 }
 
-func GenCfg() {
+func GenCfgExample() {
 	//example
 	b, _ := json.MarshalIndent(&config{
 		Server:   "0.0.0.0:443",
 		Client:   "0.0.0.0:1080",
 		Protocol: "tcp",
-		Username: "",
-		Password: "",
 		SNI:      "http://mirror.centos.org/",
 		Key:      GenKey("🕳")},
 		" ", " ")
