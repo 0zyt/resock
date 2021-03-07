@@ -51,7 +51,7 @@ func (buf Addr) String() string {
 		dstAddr.IP = []byte(buf[1 : net.IPv6len+1])
 	case 3:
 		ipAddr, err := net.ResolveIPAddr("ip", string(buf[2:n-2]))
-		if err != nil {
+		if err != nil || ipAddr == nil {
 			return ""
 		}
 		dstAddr.IP = ipAddr.IP
@@ -76,11 +76,7 @@ func readAddr(buf []byte, r io.Reader) (Addr, error) {
 	if err != nil {
 		return nil, err
 	}
-	atyp := buf[0]
-	if atyp != 1 || atyp != 3 || atyp != 4 {
-		return nil, errors.New("Unsupported address types")
-	}
-	switch atyp {
+	switch buf[0] {
 	case 1:
 		_, err = r.Read(buf[1 : 1+net.IPv4len+2])
 		return buf[:1+net.IPv4len+2], err
@@ -95,7 +91,7 @@ func readAddr(buf []byte, r io.Reader) (Addr, error) {
 		_, err = r.Read(buf[2 : 2+int(buf[1])+2])
 		return buf[:1+1+int(buf[1])+2], err
 	}
-	return nil, errors.New("Error Address")
+	return nil, errors.New("Unsupported address type")
 }
 
 func socks5Reply(conn net.Conn) error {

@@ -1,9 +1,11 @@
 package resock
 
 import (
+	"errors"
 	"io"
 	"log"
 	"net"
+	"os"
 	"runtime"
 	"sync"
 	"time"
@@ -52,7 +54,6 @@ func acceptor(listen net.Listener, pipe *Pipeline, isSrv bool, wg *sync.WaitGrou
 			accept.Close()
 			continue
 		} else {
-			accept.(*net.TCPConn).SetLinger(0)
 			if isSrv {
 				var err error
 				accept, err = pipe.Filter(accept, isSrv)
@@ -92,13 +93,14 @@ func relay(src, dst net.Conn) {
 		defer wg.Done()
 		defer PutBuf(buf)
 		src.SetReadDeadline(time.Now().Add(5 * time.Second))
-		io.CopyBuffer(src, dst, GetBuf())
-
+		if _, err := io.CopyBuffer(src, dst, GetBuf()); err != nil && !errors.Is(err, os.ErrDeadlineExceeded) {
+			log.Println(err)
+		}
 	}
 
 	wg.Add(2)
-	go forward(src, dst)
 	go forward(dst, src)
+	forward(src, dst)
 	wg.Wait()
 
 }
