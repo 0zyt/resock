@@ -52,6 +52,7 @@ func acceptor(listen net.Listener, pipe *Pipeline, isSrv bool, wg *sync.WaitGrou
 			accept.Close()
 			continue
 		} else {
+			accept.(*net.TCPConn).SetLinger(0)
 			if isSrv {
 				var err error
 				accept, err = pipe.Filter(accept, isSrv)
@@ -90,8 +91,7 @@ func relay(src, dst net.Conn) {
 		buf := GetBuf()
 		defer wg.Done()
 		defer PutBuf(buf)
-		src.SetDeadline(time.Now().Add(5 * time.Second))
-
+		src.SetReadDeadline(time.Now().Add(5 * time.Second))
 		io.CopyBuffer(src, dst, GetBuf())
 
 	}
